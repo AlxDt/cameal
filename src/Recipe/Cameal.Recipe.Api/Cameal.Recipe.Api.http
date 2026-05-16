@@ -1,0 +1,19 @@
+@Cameal.Recipe.Api_HostAddress = http://localhost:5281
+
+GET {{Cameal.Recipe.Api_HostAddress}}/api/recipes
+Accept: application/json
+
+###
+
+POST {{Cameal.Recipe.Api_HostAddress}}/api/recipes
+Content-Type: application/json
+
+{
+  "name": "Test Recipe",
+  "description": "A test recipe",
+  "ingredients": null,
+  "steps": null
+}
+
+###
+

@@ -1,6 +1,10 @@
 <Solution>
   <Folder Name="/src/" />
+  <Folder Name="/src/Client/">
+    <Project Path="src/Client/Cameal.Client.Web/Cameal.Client.Web.csproj" />
+  </Folder>
   <Folder Name="/src/Recipe/">
+    <Project Path="src/Recipe/Cameal.Recipe.Api/Cameal.Recipe.Api.csproj" />
     <Project Path="src/Recipe/Cameal.Recipe.Core/Cameal.Recipe.Core.csproj" />
   </Folder>
 </Solution>

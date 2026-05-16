@@ -1,6 +1,6 @@
 ﻿namespace Cameal.Recipe.Core;
 
-internal class Recipe
+public class Recipe
 {
     public Guid Id { get; private set; }
     public string Name { get; private set; }

@@ -1,0 +1,195 @@
+@page "/recipes"
+@using Cameal.Client.Web.Services
+@using Cameal.Client.Web.Models
+@inject IRecipeApiClient RecipeApi
+@inject NavigationManager Navigation
+@rendermode InteractiveServer
+
+<PageTitle>Recipes</PageTitle>
+
+<h1>Recipes</h1>
+
+@if (recipes == null)
+{
+    <p><em>Loading recipes...</em></p>
+}
+else if (!recipes.Any())
+{
+    <p>No recipes found. Create your first recipe below!</p>
+}
+else
+{
+    <div class="row">
+        @foreach (var recipe in recipes)
+        {
+            <div class="col-md-4 mb-3">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">@recipe.Name</h5>
+                        <p class="card-text">@recipe.Description</p>
+                        <p class="text-muted">
+                            <small>@recipe.Ingredients.Count ingredients, @recipe.Steps.Count steps</small>
+                        </p>
+                        <button class="btn btn-primary btn-sm me-2" @onclick="() => EditRecipe(recipe.Id)">Edit</button>
+                        <button class="btn btn-danger btn-sm" @onclick="() => DeleteRecipe(recipe.Id)">Delete</button>
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+}
+
+<hr />
+
+<h3>Create New Recipe</h3>
+
+<div class="card">
+    <div class="card-body">
+        <div class="mb-3">
+            <label class="form-label">Name</label>
+            <input type="text" class="form-control" @bind="newRecipeName" />
+        </div>
+        <div class="mb-3">
+            <label class="form-label">Description</label>
+            <textarea class="form-control" rows="3" @bind="newRecipeDescription"></textarea>
+        </div>
+
+        <h5 class="mt-4">Ingredients</h5>
+        @if (newIngredients.Any())
+        {
+            <ul class="list-group mb-3">
+                @foreach (var ingredient in newIngredients)
+                {
+                    <li class="list-group-item d-flex justify-content-between align-items-center">
+                        @ingredient.Quantity @ingredient.Unit @ingredient.Name
+                        <button class="btn btn-danger btn-sm" @onclick="() => RemoveIngredient(ingredient)">Remove</button>
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-5">
+                <input type="text" class="form-control" placeholder="Ingredient name" @bind="ingredientName" />
+            </div>
+            <div class="col-md-3">
+                <input type="number" class="form-control" placeholder="Quantity" @bind="ingredientQuantity" step="0.1" />
+            </div>
+            <div class="col-md-2">
+                <input type="text" class="form-control" placeholder="Unit" @bind="ingredientUnit" />
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100" @onclick="AddIngredient">Add</button>
+            </div>
+        </div>
+
+        <button class="btn btn-primary" @onclick="CreateRecipe">Create Recipe</button>
+        @if (!string.IsNullOrEmpty(errorMessage))
+        {
+            <div class="alert alert-danger mt-2">@errorMessage</div>
+        }
+    </div>
+</div>
+
+@code {
+    private List<RecipeDto>? recipes;
+    private string newRecipeName = string.Empty;
+    private string newRecipeDescription = string.Empty;
+    private string? errorMessage;
+    
+    private List<IngredientDto> newIngredients = new();
+    private string ingredientName = string.Empty;
+    private double ingredientQuantity;
+    private string ingredientUnit = string.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadRecipes();
+    }
+
+    private async Task LoadRecipes()
+    {
+        try
+        {
+            var result = await RecipeApi.GetAllRecipesAsync();
+            recipes = result.ToList();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to load recipes: {ex.Message}";
+        }
+    }
+
+    private void AddIngredient()
+    {
+        if (string.IsNullOrWhiteSpace(ingredientName) || 
+            ingredientQuantity <= 0 || 
+            string.IsNullOrWhiteSpace(ingredientUnit))
+        {
+            errorMessage = "Please fill in all ingredient fields";
+            return;
+        }
+
+        newIngredients.Add(new IngredientDto(ingredientName, ingredientQuantity, ingredientUnit));
+        
+        ingredientName = string.Empty;
+        ingredientQuantity = 0;
+        ingredientUnit = string.Empty;
+        errorMessage = null;
+    }
+
+    private void RemoveIngredient(IngredientDto ingredient)
+    {
+        newIngredients.Remove(ingredient);
+    }
+
+    private void EditRecipe(Guid recipeId)
+    {
+        Navigation.NavigateTo($"/recipes/edit/{recipeId}");
+    }
+
+    private async Task CreateRecipe()
+    {
+        errorMessage = null;
+
+        if (string.IsNullOrWhiteSpace(newRecipeName) || string.IsNullOrWhiteSpace(newRecipeDescription))
+        {
+            errorMessage = "Name and Description are required";
+            return;
+        }
+
+        try
+        {
+            var request = new CreateRecipeRequest(
+                newRecipeName,
+                newRecipeDescription,
+                newIngredients.Any() ? newIngredients : null,
+                null);
+
+            await RecipeApi.CreateRecipeAsync(request);
+            
+            newRecipeName = string.Empty;
+            newRecipeDescription = string.Empty;
+            newIngredients.Clear();
+            
+            await LoadRecipes();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to create recipe: {ex.Message}";
+        }
+    }
+
+    private async Task DeleteRecipe(Guid id)
+    {
+        try
+        {
+            await RecipeApi.DeleteRecipeAsync(id);
+            await LoadRecipes();
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to delete recipe: {ex.Message}";
+        }
+    }
+}

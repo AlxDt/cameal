@@ -1,5 +1,5 @@
 ﻿namespace Cameal.Recipe.Core;
 
-internal record Step(
+public record Step(
     int Order,
     string Description);
