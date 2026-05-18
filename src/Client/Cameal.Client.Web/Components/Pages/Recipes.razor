@@ -83,6 +83,53 @@ else
             </div>
         </div>
 
+        <h5 class="mt-4">Steps</h5>
+        @if (newSteps.Any())
+        {
+            <ul class="list-group mb-3">
+                @foreach (var step in newSteps.OrderBy(s => s.Order))
+                {
+                    <li class="list-group-item">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <div class="flex-grow-1">
+                                <strong>Step @step.Order:</strong>
+                                @if (editingStepOrder == step.Order)
+                                {
+                                    <textarea class="form-control mt-2" rows="2" @bind="editingStepDescription"></textarea>
+                                    <div class="mt-2">
+                                        <button class="btn btn-success btn-sm me-2" @onclick="SaveStepEdit">Save</button>
+                                        <button class="btn btn-secondary btn-sm" @onclick="CancelStepEdit">Cancel</button>
+                                    </div>
+                                }
+                                else
+                                {
+                                    <p class="mb-0 mt-1">@step.Description</p>
+                                }
+                            </div>
+                            @if (editingStepOrder != step.Order)
+                            {
+                                <div class="ms-2">
+                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => MoveStepUp(step)" disabled="@(step.Order == 1)">Up</button>
+                                    <button class="btn btn-sm btn-outline-primary me-1" @onclick="() => MoveStepDown(step)" disabled="@(step.Order == newSteps.Count)">Down</button>
+                                    <button class="btn btn-sm btn-warning me-1" @onclick="() => StartEditStep(step)">Edit</button>
+                                    <button class="btn btn-sm btn-danger" @onclick="() => RemoveStep(step)">Remove</button>
+                                </div>
+                            }
+                        </div>
+                    </li>
+                }
+            </ul>
+        }
+
+        <div class="row g-2 mb-3">
+            <div class="col-md-10">
+                <textarea class="form-control" placeholder="Step description" rows="2" @bind="stepDescription"></textarea>
+            </div>
+            <div class="col-md-2">
+                <button class="btn btn-secondary w-100" @onclick="AddStep">Add Step</button>
+            </div>
+        </div>
+
         <button class="btn btn-primary" @onclick="CreateRecipe">Create Recipe</button>
         @if (!string.IsNullOrEmpty(errorMessage))
         {
@@ -101,6 +148,11 @@ else
     private string ingredientName = string.Empty;
     private double ingredientQuantity;
     private string ingredientUnit = string.Empty;
+
+    private List<StepDto> newSteps = new();
+    private string stepDescription = string.Empty;
+    private int? editingStepOrder;
+    private string editingStepDescription = string.Empty;
 
     protected override async Task OnInitializedAsync()
     {
@@ -143,6 +195,97 @@ else
         newIngredients.Remove(ingredient);
     }
 
+    private void AddStep()
+    {
+        if (string.IsNullOrWhiteSpace(stepDescription))
+        {
+            errorMessage = "Please enter a step description";
+            return;
+        }
+
+        var nextOrder = newSteps.Any() ? newSteps.Max(s => s.Order) + 1 : 1;
+        newSteps.Add(new StepDto(nextOrder, stepDescription));
+        
+        stepDescription = string.Empty;
+        errorMessage = null;
+    }
+
+    private void RemoveStep(StepDto step)
+    {
+        newSteps.Remove(step);
+        ReorderSteps();
+    }
+
+    private void MoveStepUp(StepDto step)
+    {
+        if (step.Order == 1)
+        {
+            return;
+        }
+
+        var previousStep = newSteps.FirstOrDefault(s => s.Order == step.Order - 1);
+        if (previousStep != null)
+        {
+            newSteps.Remove(step);
+            newSteps.Remove(previousStep);
+            newSteps.Add(new StepDto(step.Order - 1, step.Description));
+            newSteps.Add(new StepDto(previousStep.Order + 1, previousStep.Description));
+        }
+    }
+
+    private void MoveStepDown(StepDto step)
+    {
+        if (step.Order == newSteps.Count)
+        {
+            return;
+        }
+
+        var nextStep = newSteps.FirstOrDefault(s => s.Order == step.Order + 1);
+        if (nextStep != null)
+        {
+            newSteps.Remove(step);
+            newSteps.Remove(nextStep);
+            newSteps.Add(new StepDto(step.Order + 1, step.Description));
+            newSteps.Add(new StepDto(nextStep.Order - 1, nextStep.Description));
+        }
+    }
+
+    private void StartEditStep(StepDto step)
+    {
+        editingStepOrder = step.Order;
+        editingStepDescription = step.Description;
+    }
+
+    private void SaveStepEdit()
+    {
+        if (editingStepOrder.HasValue && !string.IsNullOrWhiteSpace(editingStepDescription))
+        {
+            var step = newSteps.FirstOrDefault(s => s.Order == editingStepOrder.Value);
+            if (step != null)
+            {
+                newSteps.Remove(step);
+                newSteps.Add(new StepDto(editingStepOrder.Value, editingStepDescription));
+            }
+            CancelStepEdit();
+        }
+    }
+
+    private void CancelStepEdit()
+    {
+        editingStepOrder = null;
+        editingStepDescription = string.Empty;
+    }
+
+    private void ReorderSteps()
+    {
+        var orderedSteps = newSteps.OrderBy(s => s.Order).ToList();
+        newSteps.Clear();
+        for (int i = 0; i < orderedSteps.Count; i++)
+        {
+            newSteps.Add(new StepDto(i + 1, orderedSteps[i].Description));
+        }
+    }
+
     private void EditRecipe(Guid recipeId)
     {
         Navigation.NavigateTo($"/recipes/edit/{recipeId}");
@@ -164,13 +307,14 @@ else
                 newRecipeName,
                 newRecipeDescription,
                 newIngredients.Any() ? newIngredients : null,
-                null);
+                newSteps.Any() ? newSteps : null);
 
             await RecipeApi.CreateRecipeAsync(request);
             
             newRecipeName = string.Empty;
             newRecipeDescription = string.Empty;
             newIngredients.Clear();
+            newSteps.Clear();
             
             await LoadRecipes();
         }
