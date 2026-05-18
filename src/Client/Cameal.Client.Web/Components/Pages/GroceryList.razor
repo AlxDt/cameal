@@ -1,7 +1,10 @@
 @page "/grocery-list"
 @using Cameal.Client.Web.Services
 @using Cameal.Client.Web.Models
+@using Microsoft.JSInterop
 @inject IRecipeApiClient RecipeApi
+@inject IExcelExportService ExcelExportService
+@inject IJSRuntime JSRuntime
 @rendermode InteractiveServer
 
 <PageTitle>Grocery List</PageTitle>
@@ -52,7 +55,12 @@ else
     {
         <div class="card">
             <div class="card-body">
-                <h5 class="card-title">Your Grocery List</h5>
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h5 class="card-title mb-0">Your Grocery List</h5>
+                    <button class="btn btn-success" @onclick="ExportToExcel">
+                        <span>?? Export to Excel</span>
+                    </button>
+                </div>
                 <ul class="list-group">
                     @foreach (var item in groceryList.OrderBy(i => i.Name))
                     {
@@ -139,4 +147,26 @@ else
             errorMessage = $"Failed to generate grocery list: {ex.Message}";
         }
     }
+
+    private async Task ExportToExcel()
+    {
+        if (groceryList == null || !groceryList.Any())
+        {
+            return;
+        }
+
+        try
+        {
+            var excelData = ExcelExportService.ExportGroceryListToExcel(groceryList);
+            var fileName = $"GroceryList_{DateTime.Now:yyyy-MM-dd_HHmmss}.xlsx";
+            
+            await JSRuntime.InvokeVoidAsync("downloadFile", fileName, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", Convert.ToBase64String(excelData));
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Failed to export grocery list: {ex.Message}";
+        }
+    }
 }
+
+
