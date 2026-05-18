@@ -10,7 +10,8 @@ builder.Services.AddRazorComponents()
 // Configure HttpClient for Recipe API
 builder.Services.AddHttpClient<IRecipeApiClient, RecipeApiClient>(client =>
 {
-    client.BaseAddress = new Uri("https://localhost:7105");
+    var apiUrl = builder.Configuration["RecipeApiUrl"] ?? "https://localhost:7105";
+    client.BaseAddress = new Uri(apiUrl);
 });
 
 var app = builder.Build();
