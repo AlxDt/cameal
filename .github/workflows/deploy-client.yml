@@ -10,7 +10,7 @@ on:
   workflow_dispatch:
 
 env:
-  AZURE_WEBAPP_NAME: cameal-client-web
+  AZURE_WEBAPP_NAME: cameal-web
   AZURE_WEBAPP_PACKAGE_PATH: './src/Client/Cameal.Client.Web'
   DOTNET_VERSION: '10.0.x'
 

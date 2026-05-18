@@ -8,6 +8,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 builder.Services.AddOpenApi();
 
+// Configure CORS for Blazor client
+builder.Services.AddCors(options =>
+{
+    options.AddDefaultPolicy(policy =>
+    {
+        policy.WithOrigins(
+            "https://localhost:7191",
+            "https://cameal-client-web.azurewebsites.net"
+        )
+        .AllowAnyHeader()
+        .AllowAnyMethod();
+    });
+});
+
 // Register domain services and repositories
 builder.Services.AddSingleton<IRecipeRepository, InMemoryRecipeRepository>();
 builder.Services.AddSingleton<IGroceryListService, GroceryListService>();
