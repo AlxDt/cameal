@@ -17,6 +17,9 @@ builder.Services.AddHttpClient<IRecipeApiClient, RecipeApiClient>(client =>
 // Register Excel export service
 builder.Services.AddScoped<IExcelExportService, ExcelExportService>();
 
+// Register text export service
+builder.Services.AddScoped<ITextExportService, TextExportService>();
+
 var app = builder.Build();
 
 // Configure the HTTP request pipeline.
